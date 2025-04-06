@@ -100,6 +100,10 @@ int CHIP8::load_rom(char* path) {
     return 0;
 }
 
+uint16_t CHIP8::bit_mask(uint16_t word, uint16_t mask, int rshift) {
+    return ((word & mask) >> rshift) ;
+}
+
 int CHIP8::cycle() {
 
     /*
@@ -140,13 +144,305 @@ int CHIP8::cycle() {
 }
 
 /*
-
-    Large number of switch cases to group instructions with the same nibble.
-    first we need to get all the nibbles
-    
+    Represents EXEC of ONE instruction
+    A large nested switch is used to group instructions.
 */
 int CHIP8::instr_exec(uint16_t instruction) {
 
-    
+    /*
+        Large number of switch cases to group instructions with the same nibble.
+        first we need to get all the nibbles, here we use 8-bit variables to store the following:
+    */
 
+    uint8_t M     = bit_mask(instruction, 0xF000, 12);  //      M   : most significant nibble
+    uint8_t X     = bit_mask(instruction, 0x0F00,  8);  //      X   : second nibble -> corresponds to VX register (first  register)
+    uint8_t Y     = bit_mask(instruction, 0x00F0,  4);  //      Y   : third  nibble -> corresponds to VY register (second register)
+    uint8_t N     = bit_mask(instruction, 0x000F,  0);  //      N   : Fourth nibble
+    uint8_t KK    = bit_mask(instruction, 0x00FF,  0);  //      KK  : Lowest 8-bit (2 nibbles)
+    uint16_t NNN  = bit_mask(instruction, 0x0FFF,  0);  //      NNN : Lowest 12-bit, corresponds to an address.
+
+    /*
+    
+        We have all the segments of the instructions,
+        which can be checked using nested switches.
+
+    */
+
+    /* main switch*/
+    switch(M) {
+
+        case 0x0:
+            {
+                switch(instruction){
+                
+                    /*
+                        INSTR(1): 00E0 - CLS
+                        Clear the display.
+                    */
+                    case 0x00E0:
+                        {
+                            for(int i=0; i<MAX_DISPSIZE; i++){
+                                DISP[i] = PIX_OFF;
+                            }
+                            break;
+                        }                     
+                    
+                    /*
+                        INSTR(2): 00EE - RET
+                        Return from a subroutine.
+                    */
+                    case 0x00EE:
+                        {
+                            PC = STACK[SP];
+                            SP--;
+                            break;
+                        }
+                }
+                break;
+            }
+            
+            case 0x1:
+                {
+                    /*
+                        INSTR(3): 1nnn - JP addr
+                        Jump to location nnn.
+                    */
+                    PC = NNN;
+                    break;
+                }
+            
+            case 0x2:
+                {
+                    /*
+                        INSTR(4): 2nnn - CALL addr
+                        Call subroutine at nnn.
+                    */
+                   SP++;
+                   STACK[SP] = PC;
+                   PC = NNN;
+                   break;
+                }
+
+            case 0x3:
+                {
+                    /*
+                        INSTR(5): 3xkk - SE Vx, byte
+                        Skip next instruction if Vx = kk.
+                    */
+                    if(V[X] == KK) {
+                        PC += 2;
+                    }
+                    break;
+                }
+
+            case 0x4:
+                {
+                   /*
+                        INSTR(6): 4xkk - SNE Vx, byte
+                        Skip next instruction if Vx != kk.
+                   */ 
+                    if(V[X] != KK) {
+                        PC += 2;
+                    }
+                    break;
+                }
+
+            case 0x5:
+                {
+                    /*
+                        INSTR(7): 5xy0 - SE Vx, Vy
+                        Skip next instruction if Vx = Vy.
+                    */
+                    if(V[X] == V[Y]) {
+                        PC += 2;
+                    }
+                    break;
+                }
+
+            case 0x6:
+                {
+                    /*
+                        INSTR(8): 6xkk - LD Vx, byte
+                        Set Vx = kk.
+                    */
+                    V[X] = KK;
+                    break;
+                }
+            
+            case 0x7:
+                {
+                    /*
+                        INSTR(9): 7xkk - ADD Vx, byte
+                        Set Vx = Vx + kk.
+                    */
+                    V[X] = V[X] + KK;
+                    break;
+                }
+
+            case 0x8:
+                {
+                    switch(N) {
+                        /*
+                            INSTR(10): 8xy0 - LD Vx, Vy
+                            Set Vx = Vy.
+                        */
+                        case 0x0:
+                            {
+                                V[X] = V[Y];
+                                break;
+                            }
+                        
+                        /*
+                            INSTR(11): 8xy1 - OR Vx, Vy
+                            Set Vx = Vx OR Vy.
+                        */
+                        case 0x1:
+                        {
+                            V[X] = V[X] | V[Y];
+                            break;
+                        }
+                        /*
+                            INSTR(12): 8xy2 - AND Vx, Vy
+                            Set Vx = Vx AND Vy.
+                        */
+                        case 0x2:
+                        {
+                            V[X] = V[X] & V[Y];
+                            break;
+                        }
+                        /*
+                            INSTR(13): 8xy3 - XOR Vx, Vy
+                            Set Vx = Vx XOR Vy. 
+
+                        */
+                        case 0x3:
+                        {
+                            V[X] = V[X] ^ V[Y];
+                            break;
+                        }
+                   
+                        /*
+                            INSTR(14): 8xy4 - ADD Vx, Vy
+                            Set Vx = Vx + Vy, set VF = carry.
+                        */
+                        case 0x4:
+                        {
+                            V[0xF] = V[X]; //temporarily use Flag Register
+
+                            V[X] = V[X] + V[Y];
+                            /* carry check, sum won't be equal if V[X] overflows.*/
+                            if(V[X] - V[0xF] != V[Y]) {
+                                V[0xF] = 0x1;
+                            } else {
+                                V[0xF] = 0x0;
+                            }
+                            break;
+                        }
+                        /*
+                            INSTR(15): 8xy5 - SUB Vx, Vy
+                            Set Vx = Vx - Vy, set VF = NOT borrow.          
+                        */
+                        case 0x5:
+                        {
+                            /* carry flag is set when there is no borrow. */
+                            if(V[X] > V[Y]) {
+                                V[0xF] = 0x1;
+                            } else {
+                                V[0xF] = 0x0;
+                            }
+
+                            V[X] = V[X] - V[Y];
+
+                            break;
+                        }
+                        /*
+                            INSTR(16): 8xy6 - SHR Vx {, Vy}
+                            Set Vx = Vx SHR 1. 
+                        */
+                        case 0x6:
+                        {
+                            V[0xF] = V[X] & 1;
+                            V[X] = V[X] >> 1;
+                            break;
+                        }
+                        
+                        /*
+                            INSTR(17): 8xy7 - SUBN Vx, Vy
+                            Set Vx = Vy - Vx, set VF = NOT borrow. 
+                        */
+                        case 0x7:
+                        {
+                            /* carry flag is set when there is no borrow. */
+                            if(V[Y] > V[X]) {
+                                V[0xF] = 0x1;
+                            } else {
+                                V[0xF] = 0x0;
+                            }
+
+                            V[X] = V[Y] - V[X];
+
+                            break;
+                        }
+                        /*
+                            INSTR(18): 8xyE - SHL Vx {, Vy}
+                            Set Vx = Vx SHL 1. 
+                        */
+                        case 0x8:
+                        {    
+                            V[0xF] = (V[X] & 010000000) >> 7; 
+                            V[X] = V[X] << 1;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                
+            case 0x9:
+                {
+                    /*
+                        INSTR(19): 9xy0 - SNE Vx, Vy
+                        Skip next instruction if Vx != Vy.
+                    */
+                    if(V[X] != V[Y]) {
+                        PC += 2;
+                    }
+                    break;
+                }
+            case 0xA:
+                {
+                    /*
+                        INSTR(20): Annn - LD I, addr
+                        Set I = nnn.
+                    */
+                    I = NNN;
+                    break;
+                }
+            case 0xB:
+                {
+                    /*
+                        INSTR(21): Bnnn - JP V0, addr
+                        Jump to location nnn + V0. 
+                    */
+                    PC = NNN + (uint16_t) V[0];
+                    break;
+                }
+            case 0xC:
+                {
+                    /*
+                        INSTR(22): Cxkk - RND Vx, byte
+                        Set Vx = random byte AND kk. 
+                    */
+                    V[X] = KK & (uint8_t) (ST+DT);  /* the RAND number here is (ST+DT) */
+                    break;
+                }
+            case 0xD:
+                {
+                    /*
+                        INSTR(23): Dxyn - DRW Vx, Vy, nibble
+                        Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision. 
+                    */
+                    break;
+                }
+    }
+    
 }
