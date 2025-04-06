@@ -86,7 +86,7 @@ class CHIP8 {
             Misc.
         
         */
-        uint16_t bit_mask(uint16_t, int, )
+        uint16_t bit_mask(uint16_t, uint16_t, int);     /* helper function to mask bits, takes the original 2 bytes, a mask, and a right-shift value*/
 
     public:
         
