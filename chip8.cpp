@@ -10,8 +10,6 @@
 #include <cstring>
 #include <fstream>
 
-using namespace std;
-
 /*
 
     Initialize CHIP8 
@@ -24,7 +22,7 @@ CHIP8::CHIP8() {
         CPU Data
 
     */
-    memset(V, 0, sizeof(V));
+    std::memset(V, 0, sizeof(V));
     
     PC   = PC_STARTADR;
     I    = 0;
@@ -78,21 +76,21 @@ CHIP8::CHIP8() {
 }
 
 CHIP8::~CHIP8() {
-    cout<<"CHIP8 instance stopped.";
+    std::cout<<"CHIP8 instance stopped.";
 }
 
 int CHIP8::load_rom(char* path) {
-    ifstream rom_file(path, ios::binary);
+    std::ifstream rom_file(path, std::ios::binary);
 
     if(!rom_file.is_open()){
-        cerr<< "file does not exist.";
+        std::cerr<< "file does not exist.";
         return -1;
     }
 
     char data;
     for(int i=PC_STARTADR; rom_file.get(data); i++){
         if(i >= MAX_MEMSIZE){
-            cerr<< "file size too large";
+            std::cerr<< "file size too large";
             return -1;
         }
         MEM[i] = (uint8_t)data;
@@ -115,7 +113,7 @@ int CHIP8::cycle() {
     */
 
     if(PC >= MAX_MEMSIZE) {
-        cerr << "memory overflow";
+        std::cerr << "memory overflow";
         return -1;
     }
 
@@ -124,7 +122,7 @@ int CHIP8::cycle() {
     PC += 2;
 
     if(instr_exec(instruction) == -1) {
-        cerr<<"error executing instruction: <print instruction here>";
+        std::cerr<<"error executing instruction: <print instruction here>";
         return -1;
     }
 
@@ -154,11 +152,11 @@ int CHIP8::instr_exec(uint16_t instruction) {
         first we need to get all the nibbles, here we use 8-bit variables to store the following:
     */
 
-    uint8_t M     = bit_mask(instruction, 0xF000, 12);  //      M   : most significant nibble
-    uint8_t X     = bit_mask(instruction, 0x0F00,  8);  //      X   : second nibble -> corresponds to VX register (first  register)
-    uint8_t Y     = bit_mask(instruction, 0x00F0,  4);  //      Y   : third  nibble -> corresponds to VY register (second register)
-    uint8_t N     = bit_mask(instruction, 0x000F,  0);  //      N   : Fourth nibble
-    uint8_t KK    = bit_mask(instruction, 0x00FF,  0);  //      KK  : Lowest 8-bit (2 nibbles)
+    uint8_t  M    = bit_mask(instruction, 0xF000, 12);  //      M   : most significant nibble
+    uint8_t  X    = bit_mask(instruction, 0x0F00,  8);  //      X   : second nibble -> corresponds to VX register (first  register)
+    uint8_t  Y    = bit_mask(instruction, 0x00F0,  4);  //      Y   : third  nibble -> corresponds to VY register (second register)
+    uint8_t  N    = bit_mask(instruction, 0x000F,  0);  //      N   : Fourth nibble
+    uint8_t  KK   = bit_mask(instruction, 0x00FF,  0);  //      KK  : Lowest 8-bit (2 nibbles)
     uint16_t NNN  = bit_mask(instruction, 0x0FFF,  0);  //      NNN : Lowest 12-bit, corresponds to an address.
 
     /*
@@ -408,6 +406,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     }
                     break;
                 }
+
             case 0xA:
                 {
                     /*
@@ -417,6 +416,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     I = NNN;
                     break;
                 }
+
             case 0xB:
                 {
                     /*
@@ -426,6 +426,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     PC = NNN + (uint16_t) V[0];
                     break;
                 }
+
             case 0xC:
                 {
                     /*
@@ -435,13 +436,61 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     V[X] = KK & (uint8_t) (ST+DT);  /* the RAND number here is (ST+DT) */
                     break;
                 }
+
             case 0xD:
                 {
                     /*
                         INSTR(23): Dxyn - DRW Vx, Vy, nibble
                         Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision. 
                     */
+                    
+                    /* 
+                        starting location is MEM[I], until MEM[I+N-1].
+                        then these same bytes are copied onto starting point V[X], V[Y].
+                    */
+                    for(int i=0;i<N;i++) {
+                        
+                    }
+                    
                     break;
+                }
+                
+            case 0xE:
+                {
+                    switch(KK) {
+
+                        /*
+                            INSTR(24): Ex9E - SKP Vx
+                            Skip next instruction if key with the value of Vx is pressed.
+                        */
+                        case 0x9E:
+                            {   
+                                if(KEYP[V[X]]) {
+                                    PC += 2;
+                                }
+                                break;
+                            }
+                        
+                        /*
+                            INSTR(25): ExA1 - SKNP Vx
+                            Skip next instruction if key with the value of Vx is not pressed.
+                        */
+                        case 0xA1:
+                            {
+                                if(!KEYP[V[X]]) {
+                                    PC += 2;
+                                }
+                                break;
+                            }
+                    }
+                    break;
+                }
+            
+            case 0xF:
+                {
+                    switch(KK) {
+
+                    }
                 }
     }
     

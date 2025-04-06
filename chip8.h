@@ -77,7 +77,7 @@ class CHIP8 {
 
         */
         uint8_t     DISP[MAX_DISPSIZE];     /* 64 x 32 8-bit pixels each    */
-        uint8_t     KEYP[MAX_KEYCOUNT];     /* 16 keys 8-bit key each       */
+        uint8_t     KEYP[MAX_KEYCOUNT];     /* 16 x 8-bit key pressed       */
         
         bool        draw_flag;              /* flag if display update       */
 
