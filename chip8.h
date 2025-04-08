@@ -38,6 +38,8 @@
 #define MAX_FONTCOUNT   16*5  
 #define PIX_ON          0xFF
 #define PIX_OFF         0x00  
+#define KEY_DOWN        1
+#define KEY_UP          0
 
 /*
 
@@ -102,6 +104,7 @@ class CHIP8 {
         /* getters and setters */
         uint8_t get_disp(int );
         uint8_t get_drawflag(int );
+        void set_key(int , int );
 
         /* takes care of fetching the instruction and sending it to exec unit */
         int cycle();

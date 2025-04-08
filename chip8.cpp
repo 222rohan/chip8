@@ -18,7 +18,6 @@
 CHIP8::CHIP8() {
 
     std::cout<< "Initializing CHIP8 instance..."<<std::endl;
- 
     /*
         
         CPU Data
@@ -78,7 +77,7 @@ CHIP8::CHIP8() {
 }
 
 CHIP8::~CHIP8() {
-    std::cout<<std::endl<<"CHIP8 instance stopped.\n";
+    std::cout<<"CHIP8 instance stopped.";
 }
 
 int CHIP8::load_rom(char* path, bool SND, bool VRB) {
@@ -142,6 +141,14 @@ int CHIP8::cycle() {
 
     return 0;
 }
+
+/*
+    sets KEYP (key pressed to 1).
+*/
+void CHIP8::set_key(int key, int val) {
+    KEYP[key] = val;
+}
+
 
 /*
     Represents EXEC of ONE instruction
@@ -467,7 +474,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         */
                         case 0x9E:
                             {   
-                                if(KEYP[V[X]]) {
+                                if(KEYP[V[X]] == KEY_DOWN) {
                                     PC += 2;
                                 }
                                 break;
@@ -479,7 +486,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         */
                         case 0xA1:
                             {
-                                if(!KEYP[V[X]]) {
+                                if(KEYP[V[X]] == KEY_UP) {
                                     PC += 2;
                                 }
                                 break;
@@ -491,7 +498,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
             case 0xF:
                 {
                     switch(KK) {
-
+                        
                     }
                 }
     }
