@@ -1,0 +1,22 @@
+# OBJS ARE THE SOURCE FILES
+OBJS := main.cpp chip8.cpp 
+
+# CC IS THE COMPILER
+CC := g++
+
+# FLAGS
+FLAGS := -Wall -Wextra
+
+# LIBS ARE THE LIBRARIES TO LINK AGAINST
+LIBS := -lSDL2
+
+# TARGET EXECUTABLE
+TARGET := chip8
+
+all: $(TARGET)
+	$(CC) $(OBJS) $(COMPILER_FLAGS) $(LINKER_FLAGS) $(LIBS) -o $(TARGET)
+
+clean: 
+	rm $(TARGET)
+
+
