@@ -36,8 +36,8 @@
 #define MAX_DISPSIZE    64*32
 #define MAX_KEYCOUNT    16
 #define MAX_FONTCOUNT   16*5  
-#define PIX_ON          0x000
-#define PIX_OFF         0xFFF  
+#define PIX_ON          0xFF
+#define PIX_OFF         0x00  
 
 /*
 
@@ -97,7 +97,7 @@ class CHIP8 {
         ~CHIP8();
 
         /* Load the ROM into memory if it exists */
-        int load_rom(char*);
+        int load_rom(char*, bool, bool);
 
         /* getters and setters */
         uint8_t get_disp(int );

@@ -16,6 +16,8 @@
 
 */
 CHIP8::CHIP8() {
+
+    std::cout<< "Initializing CHIP8 instance..."<<std::endl;
  
     /*
         
@@ -76,14 +78,14 @@ CHIP8::CHIP8() {
 }
 
 CHIP8::~CHIP8() {
-    std::cout<<"CHIP8 instance stopped.";
+    std::cout<<std::endl<<"CHIP8 instance stopped.\n";
 }
 
-int CHIP8::load_rom(char* path) {
+int CHIP8::load_rom(char* path, bool SND, bool VRB) {
     std::ifstream rom_file(path, std::ios::binary);
 
     if(!rom_file.is_open()){
-        std::cerr<< "file does not exist.";
+        std::cerr<<std::endl<< "file does not exist.";
         return -1;
     }
 
@@ -180,7 +182,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     case 0x00E0:
                         {
                             for(int i=0; i<MAX_DISPSIZE; i++){
-                                DISP[i] = PIX_OFF;
+                                DISP[i] = (uint8_t)PIX_OFF;
                             }
                             break;
                         }                     
