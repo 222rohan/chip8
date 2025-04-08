@@ -73,7 +73,8 @@ int main(int argc, char *argv[]) {
     /*
         SETUP WINDOW using SDL2
         SDL window, Pointers
-        Reference: https://thenumb.at/cpp-course/index.html#sdl
+        References: 1. https://thenumb.at/cpp-course/index.html#sdl
+                    2. https://lazyfoo.net/tutorials/SDL/
     */
     SDL_Window* window = NULL;
     SDL_Renderer* renderer;

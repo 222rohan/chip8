@@ -1,6 +1,10 @@
 /*
 
-    CHIP8 
+    CHIP8 function definitions.
+
+    References: 1. https://github.com/sarbajitsaha/Chip-8-Emulator
+                2. https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
+                3. https://github.com/ArjunNair/chip8
 
 */
 
@@ -181,6 +185,13 @@ int CHIP8::instr_exec(uint16_t instruction) {
         case 0x0:
             {
                 switch(instruction){
+
+                    /*
+                        INSTR(0): 0nnn - SYS addr
+                        Jump to a machine code routine at nnn.
+                        NOTE: THIS INSTRUCTION IS OBSOLETE
+                    */
+                    
                 
                     /*
                         INSTR(1): 00E0 - CLS
@@ -304,102 +315,102 @@ int CHIP8::instr_exec(uint16_t instruction) {
                             Set Vx = Vx OR Vy.
                         */
                         case 0x1:
-                        {
-                            V[X] = V[X] | V[Y];
-                            break;
-                        }
+                            {
+                                V[X] = V[X] | V[Y];
+                                break;
+                            }
                         /*
                             INSTR(12): 8xy2 - AND Vx, Vy
                             Set Vx = Vx AND Vy.
                         */
                         case 0x2:
-                        {
-                            V[X] = V[X] & V[Y];
-                            break;
-                        }
+                            {
+                                V[X] = V[X] & V[Y];
+                                break;
+                            }
                         /*
                             INSTR(13): 8xy3 - XOR Vx, Vy
                             Set Vx = Vx XOR Vy. 
 
                         */
                         case 0x3:
-                        {
-                            V[X] = V[X] ^ V[Y];
-                            break;
-                        }
+                            {
+                                V[X] = V[X] ^ V[Y];
+                                break;
+                            }
                    
                         /*
                             INSTR(14): 8xy4 - ADD Vx, Vy
                             Set Vx = Vx + Vy, set VF = carry.
                         */
                         case 0x4:
-                        {
-                            V[0xF] = V[X]; //temporarily use Flag Register
+                            {
+                                V[0xF] = V[X]; //temporarily use Flag Register
 
-                            V[X] = V[X] + V[Y];
-                            /* carry check, sum won't be equal if V[X] overflows.*/
-                            if(V[X] - V[0xF] != V[Y]) {
-                                V[0xF] = 0x1;
-                            } else {
-                                V[0xF] = 0x0;
+                                V[X] = V[X] + V[Y];
+                                /* carry check, sum won't be equal if V[X] overflows.*/
+                                if(V[X] - V[0xF] != V[Y]) {
+                                    V[0xF] = 0x1;
+                                } else {
+                                    V[0xF] = 0x0;
+                                }
+                                break;
                             }
-                            break;
-                        }
                         /*
                             INSTR(15): 8xy5 - SUB Vx, Vy
                             Set Vx = Vx - Vy, set VF = NOT borrow.          
                         */
                         case 0x5:
-                        {
-                            /* carry flag is set when there is no borrow. */
-                            if(V[X] > V[Y]) {
-                                V[0xF] = 0x1;
-                            } else {
-                                V[0xF] = 0x0;
+                            {
+                                /* carry flag is set when there is no borrow. */
+                                if(V[X] > V[Y]) {
+                                    V[0xF] = 0x1;
+                                } else {
+                                    V[0xF] = 0x0;
+                                }
+
+                                V[X] = V[X] - V[Y];
+
+                                break;
                             }
-
-                            V[X] = V[X] - V[Y];
-
-                            break;
-                        }
                         /*
                             INSTR(16): 8xy6 - SHR Vx {, Vy}
                             Set Vx = Vx SHR 1. 
                         */
                         case 0x6:
-                        {
-                            V[0xF] = V[X] & 1;
-                            V[X] = V[X] >> 1;
-                            break;
-                        }
+                            {
+                                V[0xF] = V[X] & 1;
+                                V[X] = V[X] >> 1;
+                                break;
+                            }
                         
                         /*
                             INSTR(17): 8xy7 - SUBN Vx, Vy
                             Set Vx = Vy - Vx, set VF = NOT borrow. 
                         */
                         case 0x7:
-                        {
-                            /* carry flag is set when there is no borrow. */
-                            if(V[Y] > V[X]) {
-                                V[0xF] = 0x1;
-                            } else {
-                                V[0xF] = 0x0;
+                            {
+                                /* carry flag is set when there is no borrow. */
+                                if(V[Y] > V[X]) {
+                                    V[0xF] = 0x1;
+                                } else {
+                                    V[0xF] = 0x0;
+                                }
+
+                                V[X] = V[Y] - V[X];
+
+                                break;
                             }
-
-                            V[X] = V[Y] - V[X];
-
-                            break;
-                        }
                         /*
                             INSTR(18): 8xyE - SHL Vx {, Vy}
                             Set Vx = Vx SHL 1. 
                         */
                         case 0x8:
-                        {    
-                            V[0xF] = (V[X] & 010000000) >> 7; 
-                            V[X] = V[X] << 1;
-                            break;
-                        }
+                            {    
+                                V[0xF] = (V[X] & 010000000) >> 7; 
+                                V[X] = V[X] << 1;
+                                break;
+                            }
                     }
                     break;
                 }
@@ -513,19 +524,19 @@ int CHIP8::instr_exec(uint16_t instruction) {
                             Wait for a key press, store the value of the key in Vx.
                         */
                         case 0x0A: 
-                        {
-                            /* this checks if any key is pressed at the moment, then breaks once found*/
-                            int key_index = 0;
-                            while(true) {
-                                if(KEYP[key_index] == KEY_DOWN){
-                                    break;
+                            {
+                                /* this checks if any key is pressed at the moment, then breaks once found*/
+                                int key_index = 0;
+                                while(true) {
+                                    if(KEYP[key_index] == KEY_DOWN){
+                                        break;
+                                    }
+                                    key_index = (key_index + 1) % MAX_KEYCOUNT;
                                 }
-                                key_index = (key_index + 1) % MAX_KEYCOUNT;
+                                V[X] = key_index;
+                                
+                                break;
                             }
-                            V[X] = key_index;
-                            
-                            break;
-                        }
 
                         /*
                             INSTR(28): Fx15 - LD DT, Vx
@@ -588,6 +599,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                                 for(int i=0 ; i <= X ; i++){
                                     MEM[I+i] = V[i];
                                 }
+                                break;
                             }
 
                         /*
@@ -599,6 +611,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                                 for(int i=0 ; i <= X ; i++){
                                     V[i] = MEM[I+i];
                                 }
+                                break;
                             }                        
 
                     }

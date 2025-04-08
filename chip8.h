@@ -1,11 +1,13 @@
 #ifndef CHIP8_H
 #define CHIP8_H
 
-#include<cstdint>   //needed for concise datatypes
+#include<cstdint>   
 
 /*
 
     CHIP-8 EMULATOR in C++
+
+    References: 1. http://devernay.free.fr/hacks/chip8/C8TECH10.HTM 
 
     Specs (for reference)
     
