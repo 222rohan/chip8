@@ -563,6 +563,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         */
                         case 0x29:
                             {
+
                                 break;
                             }
 
@@ -571,13 +572,34 @@ int CHIP8::instr_exec(uint16_t instruction) {
                             Store BCD representation of Vx in memory locations I, I+1, and I+2. 
                         */
                         case 0x33:
-                            {
+                            {  
+                                MEM[I]      = (uint8_t) V[X] / 100; 
+                                MEM[I + 1]  = (uint8_t) ( (V[X] % 100) / 10);   
+                                MEM[I + 2]  = (uint8_t) ( V[X] % 10); 
                                 break;
                             }
 
                         /*
-                        
+                            INSTR(33): Fx55 - LD [I], Vx
+                            Store registers V0 through Vx in memory starting at location I.
                         */
+                        case 0x55:
+                            {
+                                for(int i=0 ; i <= X ; i++){
+                                    MEM[I+i] = V[i];
+                                }
+                            }
+
+                        /*
+                            INSTR(34): Fx65 - LD Vx, [I]
+                            Read registers V0 through Vx from memory starting at location I.
+                        */
+                        case 0x65:
+                            {
+                                for(int i=0 ; i <= X ; i++){
+                                    V[i] = MEM[I+i];
+                                }
+                            }                        
 
                     }
                     break;
