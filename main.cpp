@@ -29,10 +29,10 @@ MACHINESTATE STATE = EMU_OFF;
 uint8_t keymap[16] = {
 /*
     this is the keypad layout of CHIP8            mapped to keyboard
-            1	2	3	C                           1	2	3	4
-            4	5	6	D               ----->      Q	W	E	R
-            7	8	9	E                           A	S	D	F
-            A	0	B	F                           Z	X	C	V               
+            1   2   3   C                           1   2   3   4
+            4   5   6   D               ----->      Q   W   E   R
+            7   8   9   E                           A   S   D   F
+            A   0   B   F                           Z   X   C   V               
 */
     SDLK_x, SDLK_1, SDLK_2, SDLK_3,
     SDLK_q, SDLK_w, SDLK_e, SDLK_a,

@@ -498,8 +498,89 @@ int CHIP8::instr_exec(uint16_t instruction) {
             case 0xF:
                 {
                     switch(KK) {
+                        /*
+                            INSTR(26): Fx07 - LD Vx, DT
+                            Set Vx = delay timer value.
+                        */
+                        case 0x07: 
+                            {
+                                V[X] = DT;
+                                break;
+                            }
+
+                        /*
+                            INSTR(27): Fx0A - LD Vx, K
+                            Wait for a key press, store the value of the key in Vx.
+                        */
+                        case 0x0A: 
+                        {
+                            /* this checks if any key is pressed at the moment, then breaks once found*/
+                            int key_index = 0;
+                            while(true) {
+                                if(KEYP[key_index] == KEY_DOWN){
+                                    break;
+                                }
+                                key_index = (key_index + 1) % MAX_KEYCOUNT;
+                            }
+                            V[X] = key_index;
+                            
+                            break;
+                        }
+
+                        /*
+                            INSTR(28): Fx15 - LD DT, Vx
+                            Set delay timer = Vx.
+                        */
+                        case 0x15:
+                            {
+                                DT = V[X];
+                                break;
+                            }
+
+                        /*
+                            INSTR(29): Fx18 - LD ST, Vx
+                            Set sound timer = Vx.    
+                        */
+                        case 0x18:
+                            {
+                                ST = V[X];
+                                break;
+                            }
+
+                        /*
+                            INSTR(30): Fx1E - ADD I, Vx
+                            Set I = I + Vx.
+                        */
+                        case 0x1E:
+                            {
+                                I = I + V[X];
+                                break;
+                            }
+
+                        /*
+                            INSTR(31): Fx29 - LD F, Vx
+                            Set I = location of sprite for digit Vx.
+                        */
+                        case 0x29:
+                            {
+                                break;
+                            }
+
+                        /*
+                            INSTR(32): Fx33 - LD B, Vx
+                            Store BCD representation of Vx in memory locations I, I+1, and I+2. 
+                        */
+                        case 0x33:
+                            {
+                                break;
+                            }
+
+                        /*
                         
+                        */
+
                     }
+                    break;
                 }
     }
     
