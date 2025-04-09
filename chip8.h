@@ -27,21 +27,24 @@
 */
 
 /* CPU */
-#define MAX_REGCOUNT    16
+#define MAX_REGCOUNT    16          /* Maximum number of registers      */  
 
 /* MEM */
-#define MAX_MEMSIZE     4096
-#define MAX_STACKSIZE   16
-#define PC_STARTADR     0x200
+#define MAX_MEMSIZE     4096        /* Maximum Memory Size              */  
+#define MAX_STACKSIZE   16          /* Maximum Stack Size               */
+#define PC_STARTADR     0x200       /* Program counter start address    */
 
 /* I/O */
-#define MAX_DISPSIZE    64*32
-#define MAX_KEYCOUNT    16
-#define MAX_FONTCOUNT   16*5  
-#define PIX_ON          0xFF
-#define PIX_OFF         0x00  
-#define KEY_DOWN        1
-#define KEY_UP          0
+#define MAX_WIDTH       64          /* Maximum Width of Display (Pixels)    */
+#define MAX_HEIGHT      32          /* Maximum Height of Display (Pixels)   */
+#define MAX_DISPSIZE    64 * 32     /* Maximum Size of Display (Pixels)     */
+#define MAX_KEYCOUNT    16          /* Maximum Key count                    */
+#define MAX_FONTCOUNT   16 * 5      /* Maximum font count                   */
+#define PIX_ON          0xFF        /* Pixel ON value                       */
+#define PIX_OFF         0x00        /* Pixel OFF value                      */
+#define KEY_DOWN        1           /* Key DOWN value                       */
+#define KEY_UP          0           /* Key UP value                         */
+#define MAX_SPRITEWD    8           /* Maximum Sprite Width (Bits)          */
 
 /*
 

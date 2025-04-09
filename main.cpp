@@ -24,8 +24,8 @@ enum MACHINESTATE {EMU_ON, EMU_READY, EMU_RUN, EMU_STOP, EMU_OFF, EMU_UNDEF};
 MACHINESTATE STATE = EMU_OFF; 
 
 /* SDL2 paramters, window width and height. */
-#define WIN_WD 640
-#define WIN_HT 320
+#define WIN_WD 1280
+#define WIN_HT 640
 uint8_t keymap[16] = {
 /*
     this is the keypad layout of CHIP8            mapped to keyboard
@@ -85,10 +85,20 @@ int main(int argc, char *argv[]) {
         return -1;
     } 
 
-    int result = SDL_CreateWindowAndRenderer( WIN_WD, WIN_HT, 0, &window, &renderer );
-    if ( result != 0 ) {
-        cout << "Failed to create window and renderer: " << SDL_GetError() << endl;
-    }
+    window = SDL_CreateWindow( "CHIP8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_WD, WIN_HT, SDL_WINDOW_SHOWN );
+
+	if ( !window ) {
+		cout << "Error creating window: " << SDL_GetError()  << endl;
+		system("pause");
+		return 1;
+	}
+
+    renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED );
+	if ( !renderer ) {
+		cout << "Error creating renderer: " << SDL_GetError() << endl;
+		return false;
+	}
+
     SDL_RenderSetLogicalSize(renderer, WIN_WD, WIN_HT);
 
     while(STATE == EMU_ON){

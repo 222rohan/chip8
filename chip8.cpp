@@ -1,5 +1,7 @@
 /*
 
+    TODO: FIX PROGRAM COUNTER INCREMENT
+
     CHIP8 function definitions.
 
     References: 1. https://github.com/sarbajitsaha/Chip-8-Emulator
@@ -453,7 +455,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         INSTR(22): Cxkk - RND Vx, byte
                         Set Vx = random byte AND kk. 
                     */
-                    V[X] = KK & (uint8_t) (ST+DT);  /* the RAND number here is (ST+DT) */
+                    V[X] = KK & (uint8_t) (ST+DT+37);  /* the RAND number here is (ST+DT) */
                     break;
                 }
 
@@ -464,11 +466,29 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision. 
                     */
                     
+                    V[0xF] = 0;
+                    
                     /* 
-                        starting location is MEM[I], until MEM[I+N-1].
+                        starting location is MEM[I], until MEM[I+N-1]. Each byte is in MEM[LOC].
                         then these same bytes are copied onto starting point V[X], V[Y].
+                        a sprite is groups of 8 bytes, where each byte belongs in one row.
+                        meaning N byte sprite -> N rows of 8 bytes each.
                     */
-                    for(int i=0;i<N;i++) {
+                    for(int i = 0; i < N; i++) {
+                        // the row-byte of the sprite is MEM[I + i]
+                        for(int j = 0; j < MAX_SPRITEWD; j++) {
+                            // bit-wise check of this byte to determine whether to turn the pixel on.
+                            if((010000000 >> j) & MEM[I + i]) {
+                                //check if pixel is already ON, to set flag.
+                                if(DISP[ ((V[X]+i)*MAX_WIDTH)  +  (V[Y]+j)  %MAX_DISPSIZE ] == PIX_ON) {
+                                  /*     |---DISPLAY ROW #---|    |-BIT #-|  |---WRAP---|           */
+                                    
+                                    V[0XF] = 1;
+                                }
+                                // xor the byte against pixel 1
+                                DISP[ ((V[X]+i)*MAX_WIDTH)  +  (V[Y]+j) %MAX_DISPSIZE ] ^= PIX_ON;
+                            } 
+                        }
                         
                     }
                     
@@ -574,7 +594,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         */
                         case 0x29:
                             {
-
+                                I = V[X] * 0x05;
                                 break;
                             }
 
