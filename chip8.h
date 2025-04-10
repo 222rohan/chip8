@@ -40,8 +40,8 @@
 #define MAX_DISPSIZE    64 * 32     /* Maximum Size of Display (Pixels)     */
 #define MAX_KEYCOUNT    16          /* Maximum Key count                    */
 #define MAX_FONTCOUNT   16 * 5      /* Maximum font count                   */
-#define PIX_ON          0xFF        /* Pixel ON value                       */
-#define PIX_OFF         0x00        /* Pixel OFF value                      */
+#define PIX_ON          0xf9fff5bf  /* Pixel ON value                       */
+#define PIX_OFF         0x001e23bf  /* Pixel OFF value                      */
 #define KEY_DOWN        1           /* Key DOWN value                       */
 #define KEY_UP          0           /* Key UP value                         */
 #define MAX_SPRITEWD    8           /* Maximum Sprite Width (Bits)          */
@@ -83,7 +83,7 @@ class CHIP8 {
             I/O Data
 
         */
-        uint8_t     DISP[MAX_DISPSIZE];     /* 64 x 32 8-bit pixels each    */
+        uint32_t    DISP[MAX_DISPSIZE];     /* 64 x 32 32-bit pixels each   */
         uint8_t     KEYP[MAX_KEYCOUNT];     /* 16 x 8-bit key pressed       */
         
         bool        draw_flag;              /* flag if display update       */
@@ -93,6 +93,8 @@ class CHIP8 {
             Misc.
         
         */
+        bool VRB;
+        bool SND;
         uint16_t bit_mask(uint16_t, uint16_t, int);     /* helper function to mask bits, takes the original 2 bytes, a mask, and a right-shift value*/
 
     public:
@@ -107,9 +109,11 @@ class CHIP8 {
         int load_rom(char*, bool, bool);
 
         /* getters and setters */
-        uint8_t get_disp(int );
-        uint8_t get_drawflag(int );
-        void set_key(int , int );
+        uint32_t get_pixel(int );
+        bool     get_drawflag();
+        uint8_t  get_key(int );
+        void     set_key(int , int );
+        void     set_drawflag(bool );
 
         /* takes care of fetching the instruction and sending it to exec unit */
         int cycle();
