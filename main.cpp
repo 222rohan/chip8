@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-    renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED );
+    renderer = SDL_CreateRenderer( window, -1, 0 );
 	if ( !renderer ) {
 		cout << "Error creating renderer: " << SDL_GetError() << endl;
 		return false;
