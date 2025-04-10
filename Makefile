@@ -5,7 +5,7 @@ OBJS := main.cpp chip8.cpp
 CC := g++
 
 # FLAGS
-FLAGS := -Wall -Wextra
+FLAGS := -Wall -Wextra -pedantic
 
 # LIBS ARE THE LIBRARIES TO LINK AGAINST
 LIBS := -lSDL2
@@ -13,8 +13,8 @@ LIBS := -lSDL2
 # TARGET EXECUTABLE
 TARGET := chip8
 
-all: $(TARGET)
-	$(CC) $(OBJS) $(COMPILER_FLAGS) $(LINKER_FLAGS) $(LIBS) -o $(TARGET)
+all: $(OBJS)
+	$(CC) $(OBJS) $(COMPILER_FLAGS) $(FLAGS) $(LINKER_FLAGS) $(LIBS) -o $(TARGET)
 
 clean: 
 	rm $(TARGET)
