@@ -78,6 +78,7 @@ int main(int argc, char *argv[]) {
     */
     SDL_Window* window = NULL;
     SDL_Renderer* renderer;
+    SDL_Texture *texture;
 
     if ( SDL_Init( SDL_INIT_EVERYTHING ) < 0 ) {
         cerr << "Error initializing SDL: " << SDL_GetError() << endl;
@@ -100,6 +101,14 @@ int main(int argc, char *argv[]) {
 	}
 
     SDL_RenderSetLogicalSize(renderer, WIN_WD, WIN_HT);
+
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, MAX_WIDTH, MAX_HEIGHT);
+    if (texture == NULL)
+    {
+        std::cerr << "Error in setting up texture " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        exit(1);
+    }
 
     while(STATE == EMU_ON){
         chip8_instance.cycle();
@@ -134,20 +143,39 @@ int main(int argc, char *argv[]) {
                 } 
             }
         }
+        /*
+            Update screen if drawflag is set.
+        */
+        if(chip8_instance.get_drawflag()) {
+            uint32_t video_buffer[MAX_DISPSIZE];
+            for(int i=0; i<MAX_DISPSIZE; i++){
+                video_buffer[i] = chip8_instance.get_pixel(i);
+            }
+            
+            SDL_UpdateTexture(texture, NULL, video_buffer, MAX_WIDTH * sizeof(uint32_t));
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture , NULL, NULL);
+            SDL_RenderPresent(renderer);
+
+            chip8_instance.set_drawflag(false);
+        }
+
         sleep(1);
     }
 
+
+    //SDL_Quit();
     return 0;
 }
 
 void parse_commands(int argc, char* argv[], uint8_t *MODE){
     if(argc < 2) {
-        cout<<"usage: ./chip8 <rom>.ch8 <-options[hvac]>"<<endl;
+        cout<<"usage: ./chip8 <rom> <-options[hvac]>"<<endl;
         exit(0);
     }
 
     if(strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0 || strcmp(argv[1], "help") == 0) {
-        cout<<"usage: ./chip8 <rom>.ch8 <-options[hvac]>"<<endl;
+        cout<<"usage: ./chip8 <rom> <-options[hvac]>"<<endl;
         cout<<"options:"<<endl;
         cout<<"\t-h : shows this message."<<endl;
         cout<<"\t-v : verbose mode, shows interal trace."<<endl;
@@ -161,7 +189,7 @@ void parse_commands(int argc, char* argv[], uint8_t *MODE){
         string options = argv[2];
 
         if(options.find("h") != string::npos){
-            cout<<"usage: ./chip8 <rom>.ch8 <-options[hvac]>"<<endl;
+            cout<<"usage: ./chip8 <rom> <-options[hvac]>"<<endl;
             cout<<"options:"<<endl;
             cout<<"\t-h : shows this message."<<endl;
             cout<<"\t-v : verbose mode, shows interal trace."<<endl;
