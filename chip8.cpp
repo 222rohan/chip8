@@ -415,20 +415,6 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     */
                     case 0x4:
                         {
-                            /*
-                                For now, use a simpler implementation
-                            
-                            V[0xF] = V[X]; //temporarily use Flag Register
-
-                            V[X] = V[X] + V[Y];
-                            /* carry check, sum won't be equal if V[X] overflows.
-                            if(V[X] - V[0xF] != V[Y]) {
-                                V[0xF] = 0x1;
-                            } else {
-                                V[0xF] = 0x0;
-                            }
-                            */
-
                             if((V[X] + V[Y]) > 0xFF) {
                                 V[0xF] = 0x1;
                             } else {
@@ -734,7 +720,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
         }
     }
     
-    if(VRB) {
+    if(MODE_VRB) {
         std::cout << std::hex << "PC[0x" << instruction << "] : [EXEC] 0x" << std::hex << instruction <<std::endl;
         for(int i=0;i<MAX_REGCOUNT;i++){
             std::cout<<"\tV["<<std::hex<<i<<"] = 0x"<<std::hex<<V[i]<<std::endl;
