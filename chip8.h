@@ -40,8 +40,8 @@
 #define MAX_DISPSIZE    64 * 32     /* Maximum Size of Display (Pixels)     */
 #define MAX_KEYCOUNT    16          /* Maximum Key count                    */
 #define MAX_FONTCOUNT   16 * 5      /* Maximum font count                   */
-#define PIX_ON          0xf9fff5bf  /* Pixel ON value                       */
-#define PIX_OFF         0x001e23bf  /* Pixel OFF value                      */
+#define PIX_ON          0x1         /* Pixel ON value                       */
+#define PIX_OFF         0x0         /* Pixel OFF value                      */
 #define KEY_DOWN        1           /* Key DOWN value                       */
 #define KEY_UP          0           /* Key UP value                         */
 #define MAX_SPRITEWD    8           /* Maximum Sprite Width (Bits)          */
@@ -83,18 +83,19 @@ class CHIP8 {
             I/O Data
 
         */
-        uint32_t    DISP[MAX_DISPSIZE];     /* 64 x 32 32-bit pixels each   */
-        uint8_t     KEYP[MAX_KEYCOUNT];     /* 16 x 8-bit key pressed       */
+        uint8_t    DISP[MAX_DISPSIZE];     /* 64 x 32 32-bit pixels each   */
+        uint8_t    KEYP[MAX_KEYCOUNT];     /* 16 x 8-bit key pressed       */
         
-        bool        draw_flag;              /* flag if display update       */
+        bool       draw_flag;              /* flag if display update       */
 
         /*
         
             Misc.
         
         */
-        bool VRB;
-        bool SND;
+        bool MODE_VRB;
+        bool MODE_SND;
+        bool MODE_STP;
         uint16_t bit_mask(uint16_t, uint16_t, int);     /* helper function to mask bits, takes the original 2 bytes, a mask, and a right-shift value*/
 
     public:
@@ -106,9 +107,10 @@ class CHIP8 {
         ~CHIP8();
 
         /* Load the ROM into memory if it exists */
-        int load_rom(char*, bool, bool);
+        int load_rom(char*, bool, bool, bool);
 
         /* getters and setters */
+        bool     get_STP();
         uint32_t get_pixel(int );
         bool     get_drawflag();
         uint8_t  get_key(int );

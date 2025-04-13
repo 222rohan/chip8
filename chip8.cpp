@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <random>
 
 /*
 
@@ -29,19 +30,20 @@ CHIP8::CHIP8() {
         CPU Data
 
     */
-    std::memset(V, 0, sizeof(V));
+    std::memset(V, 0x0, sizeof(V));
     
     PC   = PC_STARTADR;
-    I    = 0;
-    DT   = 0;
-    ST   = 0;
+    I    = 0x0;
+    DT   = 0x0;
+    ST   = 0x0;
     
     /*
         
         MEM Data
         
     */
-    memset(STACK, 0, sizeof(STACK));
+    memset(MEM  , 0x0, sizeof( MEM ));
+    memset(STACK, 0x0, sizeof(STACK));
    
     SP   = -1;
 
@@ -50,10 +52,13 @@ CHIP8::CHIP8() {
         I/O Data
         
     */
-    memset(DISP, 0, sizeof(DISP));
-    memset(KEYP, 0, sizeof(KEYP));
+    memset(DISP, PIX_OFF, sizeof(DISP));
+    memset(KEYP, KEY_UP, sizeof(KEYP));
 
     draw_flag = false;
+    MODE_SND  = false;
+    MODE_STP  = false;
+    MODE_VRB  = false;
 
     /* initialise font set */
     uint8_t font_set[MAX_FONTCOUNT] {
@@ -75,10 +80,15 @@ CHIP8::CHIP8() {
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
     };
 
-    /* load font set in memory from 0x050 to 0x09F */
+    /* load font set in memory from 0x00 */
     for(int i=0; i < 80; i++) {
-        MEM[i + 0x50] = font_set[i];
+        MEM[i] = font_set[i];
     }
+
+    /*
+        Seed the RNG
+    */
+    srand(time(NULL));
 
 }
 
@@ -94,13 +104,13 @@ CHIP8::~CHIP8() {
 /*
 
     main function to load the ROM into CHIP instance.
-    Takes ROM path, SOUND MODE bit, VERBOSE (trace) MODE bit as parameters.
+    Takes ROM path, SOUND MODE bit, VERBOSE (trace) MODE, (SINGLE)STEP MODE bit as parameters.
     Returns 0 on successful execution
     Returns -1 if unable to load ROM file.
 
 */
-int CHIP8::load_rom(char* path, bool SND, bool VRB) {
-    std::ifstream rom_file(path, std::ios::binary | std::ios::in);
+int CHIP8::load_rom(char* path, bool SND, bool VRB, bool STP) {
+    std::ifstream rom_file(path, std::ios::binary);
 
     if(!rom_file.is_open()){
         std::cerr<<std::endl<< "file does not exist.";
@@ -115,11 +125,19 @@ int CHIP8::load_rom(char* path, bool SND, bool VRB) {
         }
         MEM[i] = (uint8_t)data;
     }
-    this->SND = SND;
-    this->VRB = VRB;
+    this->MODE_SND = SND;
+    this->MODE_VRB = VRB;
+    this->MODE_STP = STP;
     std::cout<<"loaded ROM successfully."<<std::endl;
 
     return 0;
+}
+
+/*
+    Returns the value of MODE_STP (single Step mode)
+*/
+bool CHIP8::get_STP() {
+    return MODE_STP;
 }
 
 /*
@@ -178,7 +196,6 @@ int CHIP8::cycle() {
         std::cerr << "memory overflow";
         return -1;
     }
-
     uint16_t instruction = ( ( MEM[PC] << 8 ) |  MEM[PC+1] );
     /* go to next address +2 bytes */
     PC += 2;
@@ -190,15 +207,11 @@ int CHIP8::cycle() {
 
     if(DT > 0) {
         DT--;
-    } else {
-
-    }
+    } 
 
     if(ST > 0) {
         ST--;
-    } else {
-
-    }
+    } 
 
     return 0;
 }
@@ -258,8 +271,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         {
                             for(int i=0; i<MAX_DISPSIZE; i++){
                                 DISP[i] = PIX_OFF;
-                            } 
-                            set_drawflag(true);
+                            }                             
                             break;
                         }                     
                     
@@ -403,15 +415,28 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     */
                     case 0x4:
                         {
+                            /*
+                                For now, use a simpler implementation
+                            
                             V[0xF] = V[X]; //temporarily use Flag Register
 
                             V[X] = V[X] + V[Y];
-                            /* carry check, sum won't be equal if V[X] overflows.*/
+                            /* carry check, sum won't be equal if V[X] overflows.
                             if(V[X] - V[0xF] != V[Y]) {
                                 V[0xF] = 0x1;
                             } else {
                                 V[0xF] = 0x0;
                             }
+                            */
+
+                            if((V[X] + V[Y]) > 0xFF) {
+                                V[0xF] = 0x1;
+                            } else {
+                                V[0xF] = 0x0;
+                            }
+
+                            V[X] = V[X] + V[Y];
+
                             break;
                         }
                     /*
@@ -437,7 +462,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     */
                     case 0x6:
                         {
-                            V[0xF] = V[X] & 1;
+                            V[0xF] = V[X] & 0x1;
                             V[X] = V[X] >> 1;
                             break;
                         }
@@ -463,9 +488,9 @@ int CHIP8::instr_exec(uint16_t instruction) {
                         INSTR(18): 8xyE - SHL Vx {, Vy}
                         Set Vx = Vx SHL 1. 
                     */
-                    case 0x8:
+                    case 0xE:
                         {    
-                            V[0xF] = (V[X] & 010000000) >> 7; 
+                            V[0xF] = V[X] >> 7; 
                             V[X] = V[X] << 1;
                             break;
                         }
@@ -511,7 +536,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     INSTR(22): Cxkk - RND Vx, byte
                     Set Vx = random byte AND kk. 
                 */
-                V[X] = KK & (uint8_t) (ST+DT+37);  /* the RAND number here is (ST+DT) */
+                V[X] = KK & (uint8_t) (rand() % 0xFF);  /* the RAND number ) */
                 break;
             }
 
@@ -534,18 +559,22 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     // the row-byte of the sprite is MEM[I + i]
                     for(int j = 0; j < MAX_SPRITEWD; j++) {
                         // bit-wise check of this byte to determine whether to turn the pixel on.
-                        if((010000000 >> j) & MEM[I + i]) {
+                        if( ((0x80 >> j) & MEM[I + i]) != 0) {
                             //check if pixel is already ON, to set flag.
-                            if(DISP[ ((V[X]+i)*MAX_WIDTH)  +  (V[Y]+j)  %MAX_DISPSIZE ] == PIX_ON) {
-                                /*     |---DISPLAY ROW #---|    |-BIT #-|  |---WRAP---|           */
-                                //                              (COLUMN)
+                            int index =  ((V[Y]+i)*MAX_WIDTH)  +  (V[X]+j)   ;
+                                  /*     |---DISPLAY ROW #---|    |-BIT #-|             */
+                                  //                              (COLUMN)
+                            if(index > MAX_DISPSIZE) {
+                                index = index % MAX_DISPSIZE;
+                            }
+                            if(DISP[index] == PIX_ON) {
+                                
                                 V[0XF] = 1;
                             }
                             // xor the byte against pixel ON
-                            DISP[ ((V[X]+i)*MAX_WIDTH)  +  (V[Y]+j) %MAX_DISPSIZE ] ^= PIX_ON;
+                            DISP[index] ^= PIX_ON;
                         } 
                     }
-                    
                 }
                 set_drawflag(true);
                 break;
@@ -640,7 +669,10 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     */
                     case 0x1E:
                         {
-                            I = I + V[X];
+                            if(I+V[X] > 0xFFF) {
+                                V[0xF] = 1;
+                            } else V[0xF] = 0;
+                            I = (uint16_t) (I + V[X]);
                             break;
                         }
 
@@ -661,8 +693,8 @@ int CHIP8::instr_exec(uint16_t instruction) {
                     case 0x33:
                         {  
                             MEM[I]      = (uint8_t) V[X] / 100; 
-                            MEM[I + 1]  = (uint8_t) ( (V[X] % 100) / 10);   
-                            MEM[I + 2]  = (uint8_t) ( V[X] % 10); 
+                            MEM[I + 1]  = (uint8_t) ( (V[X] / 10) % 10);   
+                            MEM[I + 2]  = (uint8_t) ( V[X] % 100) % 10;
                             break;
                         }
 
@@ -675,6 +707,7 @@ int CHIP8::instr_exec(uint16_t instruction) {
                             for(int i=0 ; i <= X ; i++){
                                 MEM[I+i] = V[i];
                             }
+                            I = (uint16_t) (I + X + 0x1);
                             break;
                         }
 
@@ -687,6 +720,8 @@ int CHIP8::instr_exec(uint16_t instruction) {
                             for(int i=0 ; i <= X ; i++){
                                 V[i] = MEM[I+i];
                             }
+                            I = (uint16_t) (I + X + 0x1);
+                            
                             break;
                         }                        
 
@@ -700,7 +735,12 @@ int CHIP8::instr_exec(uint16_t instruction) {
     }
     
     if(VRB) {
-        std::cout << "[EXEC] " << std::hex << instruction << std::endl;
+        std::cout << std::hex << "PC[0x" << instruction << "] : [EXEC] 0x" << std::hex << instruction <<std::endl;
+        for(int i=0;i<MAX_REGCOUNT;i++){
+            std::cout<<"\tV["<<std::hex<<i<<"] = 0x"<<std::hex<<V[i]<<std::endl;
+        }
+        std::cout<<"\t[I]  = 0x" <<std::hex<<I<<std::endl;
+        std::cout<<"\t[SP] = 0x" <<std::hex<<SP<<std::endl;
     }
     return 0;
 }
