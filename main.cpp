@@ -16,16 +16,19 @@
 
 using namespace std;
 
-#define MODE_VRB 000000001
-#define MODE_SND 000000010
+#define MODE_VRB        000000001
+#define MODE_SND        000000010
+#define MODE_STP        000000100
+#define PIX_ON_COLOR    0xbff9fff5    /* Pixel ON color value: ARGB                    */
+#define PIX_OFF_COLOR   0xbf001e23    /* Pixel OFF color value: ARGB                    */
 
 /* State of the machine, will be used for trace, and running. */
 enum MACHINESTATE {EMU_ON, EMU_READY, EMU_RUN, EMU_STOP, EMU_OFF, EMU_UNDEF};
 MACHINESTATE STATE = EMU_OFF; 
 
 /* SDL2 paramters, window width and height. */
-#define WIN_WD 1280
-#define WIN_HT 640
+#define WIN_WD 960
+#define WIN_HT 480
 uint8_t keymap[16] = {
 /*
     this is the keypad layout of CHIP8            mapped to keyboard
@@ -40,10 +43,19 @@ uint8_t keymap[16] = {
     SDLK_4, SDLK_r, SDLK_f, SDLK_v,
 };
 
+struct STRUCT_SDL
+{
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    SDL_Texture *texture;
+};
+
+
 void    parse_commands(int, char*[], uint8_t*);
 int     setup_rom(CHIP8*, char*, uint8_t);
-int     setup_window();
-int     exit_emu(int );
+int     setup_window(struct STRUCT_SDL*);
+int     run_gameloop(struct STRUCT_SDL*, int );
+int     close_window(struct STRUCT_SDL*);
 
 int main(int argc, char *argv[]) {
     STATE = EMU_ON;
@@ -55,9 +67,9 @@ int main(int argc, char *argv[]) {
         Sound   OFF: 2nd from right bit ON.     (00000010).
     */
     uint8_t MODE = 0;
-
     parse_commands(argc,argv, &MODE);
 
+    STRUCT_SDL sdl_setupvar;
     CHIP8 chip8_instance;
     
     if(setup_rom(&chip8_instance, argv[1], MODE) == -1) {
@@ -65,106 +77,11 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if(setup_window() == -1) {
+    if(setup_window(&sdl_setupvar) == -1) {
         cerr<<std::endl<<"could not setup SDL2 window.";
         exit(1);
     }
 
-    /*
-        SETUP WINDOW using SDL2
-        SDL window, Pointers
-        References: 1. https://thenumb.at/cpp-course/index.html#sdl
-                    2. https://lazyfoo.net/tutorials/SDL/
-    */
-    SDL_Window* window = NULL;
-    SDL_Renderer* renderer;
-    SDL_Texture *texture;
-
-    if ( SDL_Init( SDL_INIT_EVERYTHING ) < 0 ) {
-        cerr << "Error initializing SDL: " << SDL_GetError() << endl;
-        system("pause");
-        return -1;
-    } 
-
-    window = SDL_CreateWindow( "CHIP8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_WD, WIN_HT, SDL_WINDOW_SHOWN );
-
-	if ( !window ) {
-		cout << "Error creating window: " << SDL_GetError()  << endl;
-		system("pause");
-		return 1;
-	}
-
-    renderer = SDL_CreateRenderer( window, -1, 0 );
-	if ( !renderer ) {
-		cout << "Error creating renderer: " << SDL_GetError() << endl;
-		return false;
-	}
-
-    SDL_RenderSetLogicalSize(renderer, WIN_WD, WIN_HT);
-
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, MAX_WIDTH, MAX_HEIGHT);
-    if (texture == NULL)
-    {
-        std::cerr << "Error in setting up texture " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        exit(1);
-    }
-
-    while(STATE == EMU_ON){
-        chip8_instance.cycle();
-
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if(event.type == SDL_QUIT){
-                STATE = EMU_OFF;
-            }
-
-            if(event.type == SDL_KEYDOWN) {
-                if (event.key.keysym.sym == SDLK_ESCAPE) {
-                    STATE = EMU_OFF;
-                }
-
-                for (int i = 0; i < MAX_KEYCOUNT; i++)
-                {
-                    if (event.key.keysym.sym == keymap[i])
-                    {
-                        chip8_instance.set_key(i, KEY_DOWN);
-                    }
-                }                
-            }
-
-            if(event.type == SDL_KEYUP) {
-                for (int i = 0; i < MAX_KEYCOUNT; i++)
-                {
-                    if (event.key.keysym.sym == keymap[i])
-                    {
-                        chip8_instance.set_key(i, KEY_UP);
-                    }
-                } 
-            }
-        }
-        /*
-            Update screen if drawflag is set.
-        */
-        if(chip8_instance.get_drawflag()) {
-            uint32_t video_buffer[MAX_DISPSIZE];
-            for(int i=0; i<MAX_DISPSIZE; i++){
-                video_buffer[i] = chip8_instance.get_pixel(i);
-            }
-            
-            SDL_UpdateTexture(texture, NULL, video_buffer, MAX_WIDTH * sizeof(uint32_t));
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, texture , NULL, NULL);
-            SDL_RenderPresent(renderer);
-
-            chip8_instance.set_drawflag(false);
-        }
-
-        sleep(1);
-    }
-
-
-    //SDL_Quit();
     return 0;
 }
 
@@ -218,7 +135,7 @@ void parse_commands(int argc, char* argv[], uint8_t *MODE){
 
         if(!option_correct) {
             cout << "invalid option. check valid options using ./chip -h"<<endl;
-            exit(1);
+            return 1;
         }
     }
     
@@ -230,6 +147,7 @@ int setup_rom(CHIP8 *chip8_instance, char *rom, uint8_t MODE) {
     //for now call load_rom directly, add fancy path checkers later
     bool sound = false;
     bool verbose = false;
+    bool step = false;
 
     if(MODE & MODE_SND) {
         sound = true;
@@ -237,14 +155,105 @@ int setup_rom(CHIP8 *chip8_instance, char *rom, uint8_t MODE) {
     if(MODE & MODE_VRB) {
         verbose = true;
     }
+    if(MODE & MODE_STP) {
+        step = true;
+    }
 
-    return chip8_instance->load_rom(rom, sound, verbose);
+    return chip8_instance->load_rom(rom, sound, verbose, step);
 }
 
-int setup_window() {
-    return 0;
+int setup_window(struct STRUCT_SDL* sdl_setupvar) {
+    if ( SDL_Init( SDL_INIT_EVERYTHING ) < 0 ) {
+        cerr << "Error initializing SDL: " << SDL_GetError() << endl;
+        system("pause");
+        return -1;
+    } 
+
+    sdl_setupvar->window = SDL_CreateWindow( "CHIP8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_WD, WIN_HT, SDL_WINDOW_SHOWN );
+
+	if ( !window ) {
+		cout << "Error creating window: " << SDL_GetError()  << endl;
+		system("pause");
+		return -1;
+	}
+
+    sdl_setupvar->renderer = SDL_CreateRenderer( sdl_setupvar->window, -1, 0 );
+	if ( !sdl_setupvar->renderer ) {
+		cout << "Error creating renderer: " << SDL_GetError() << endl;
+		return -1;
+	}
+
+    SDL_RenderSetLogicalSize(sdl_setupvar->renderer, WIN_WD, WIN_HT);
+
+    sdl_setupvar->texture = SDL_CreateTexture(sdl_setupvar->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, MAX_WIDTH, MAX_HEIGHT);
+    if (sdl_setupvar->texture == NULL)
+    {
+        std::cerr << "Error in setting up texture " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        return -1;
+    }
 }
 
-int exit_emu(int code) {
-    exit(code);
+int run_gameloop(CHIP8 *chip8_instance, struct STRUCT_SDL* sdl_var, int refresh_rate = 1300) {
+    while(STATE == EMU_ON){
+        chip8_instance->cycle();
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if(event.type == SDL_QUIT){
+                STATE = EMU_OFF;
+            }
+
+            if(event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    STATE = EMU_OFF;
+                }
+
+                for (int i = 0; i < MAX_KEYCOUNT; i++)
+                {
+                    if (event.key.keysym.sym == keymap[i])
+                    {
+                        chip8_instance->set_key(i, KEY_DOWN);
+                    }
+                }                
+            }
+
+            if(event.type == SDL_KEYUP) {
+                for (int i = 0; i < MAX_KEYCOUNT; i++)
+                {
+                    if (event.key.keysym.sym == keymap[i])
+                    {
+                        chip8_instance->set_key(i, KEY_UP);
+                    }
+                } 
+            }
+        }
+        /*
+            Update screen if drawflag is set.
+        */
+        if(chip8_instance->get_drawflag() == true) {
+            uint32_t video_buffer[MAX_DISPSIZE];
+            for(int i=0; i<MAX_DISPSIZE; i++){
+                if(chip8_instance->get_pixel(i) == PIX_ON) {
+                    video_buffer[i] = PIX_ON_COLOR;
+                } else {
+                    video_buffer[i] = PIX_OFF_COLOR;
+                }
+            }
+            
+            SDL_UpdateTexture(texture, NULL, &video_buffer, MAX_WIDTH * sizeof(uint32_t));
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture , NULL, NULL);
+            SDL_RenderPresent(renderer);
+
+            chip8_instance->set_drawflag(false);
+        }
+
+        usleep(refresh_rate);
+
+        if(chip8_instance->get_STP() == true) {
+            //implement something here 
+        }
+    }
 }
+int     close_window(struct STRUCT_SDL*);
