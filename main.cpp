@@ -20,7 +20,8 @@ using namespace std;
 #define MODE_SND        000000010
 #define MODE_STP        000000100
 #define PIX_ON_COLOR    0xbff9fff5    /* Pixel ON color value: ARGB                    */
-#define PIX_OFF_COLOR   0xbf001e23    /* Pixel OFF color value: ARGB                    */
+#define PIX_OFF_COLOR   0xbf001e23    /* Pixel OFF color value: ARGB                   */
+#define REFRESH_TIME    1300          /* Refresh time in milliseconds                  */
 
 /* State of the machine, will be used for trace, and running. */
 enum MACHINESTATE {EMU_ON, EMU_READY, EMU_RUN, EMU_STOP, EMU_OFF, EMU_UNDEF};
@@ -54,8 +55,8 @@ struct STRUCT_SDL
 void    parse_commands(int, char*[], uint8_t*);
 int     setup_rom(CHIP8*, char*, uint8_t);
 int     setup_window(struct STRUCT_SDL*);
-int     run_gameloop(struct STRUCT_SDL*, int );
-int     close_window(struct STRUCT_SDL*);
+int     run_gameloop(CHIP8*, struct STRUCT_SDL*, int );
+void    close_window(struct STRUCT_SDL*);
 
 int main(int argc, char *argv[]) {
     STATE = EMU_ON;
@@ -81,6 +82,11 @@ int main(int argc, char *argv[]) {
         cerr<<std::endl<<"could not setup SDL2 window.";
         exit(1);
     }
+
+    if(run_gameloop(&chip8_instance, &sdl_setupvar, REFRESH_TIME) == -1) {
+        cerr <<"error running game loop.";
+    }
+    close_window(&sdl_setupvar);
 
     return 0;
 }
@@ -135,12 +141,10 @@ void parse_commands(int argc, char* argv[], uint8_t *MODE){
 
         if(!option_correct) {
             cout << "invalid option. check valid options using ./chip -h"<<endl;
-            return 1;
+            return;
         }
     }
     
-    
-
 }
 
 int setup_rom(CHIP8 *chip8_instance, char *rom, uint8_t MODE) {
@@ -171,7 +175,7 @@ int setup_window(struct STRUCT_SDL* sdl_setupvar) {
 
     sdl_setupvar->window = SDL_CreateWindow( "CHIP8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_WD, WIN_HT, SDL_WINDOW_SHOWN );
 
-	if ( !window ) {
+	if ( !sdl_setupvar->window ) {
 		cout << "Error creating window: " << SDL_GetError()  << endl;
 		system("pause");
 		return -1;
@@ -192,21 +196,27 @@ int setup_window(struct STRUCT_SDL* sdl_setupvar) {
         SDL_Quit();
         return -1;
     }
+    return 0;
 }
 
-int run_gameloop(CHIP8 *chip8_instance, struct STRUCT_SDL* sdl_var, int refresh_rate = 1300) {
+int run_gameloop(CHIP8 *chip8_instance, struct STRUCT_SDL* sdl_setupvar, int refresh_time) {
     while(STATE == EMU_ON){
-        chip8_instance->cycle();
+        if(chip8_instance->cycle() == -1) {
+            cerr << "Error in CHIP8 cycle.";
+            return -1;
+        }
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if(event.type == SDL_QUIT){
                 STATE = EMU_OFF;
+                return 0;
             }
 
             if(event.type == SDL_KEYDOWN) {
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
                     STATE = EMU_OFF;
+                    return 0;
                 }
 
                 for (int i = 0; i < MAX_KEYCOUNT; i++)
@@ -241,19 +251,37 @@ int run_gameloop(CHIP8 *chip8_instance, struct STRUCT_SDL* sdl_var, int refresh_
                 }
             }
             
-            SDL_UpdateTexture(texture, NULL, &video_buffer, MAX_WIDTH * sizeof(uint32_t));
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, texture , NULL, NULL);
-            SDL_RenderPresent(renderer);
+            SDL_UpdateTexture(sdl_setupvar->texture, NULL, &video_buffer, MAX_WIDTH * sizeof(uint32_t));
+            SDL_RenderClear(sdl_setupvar->renderer);
+            SDL_RenderCopy(sdl_setupvar->renderer, sdl_setupvar->texture , NULL, NULL);
+            SDL_RenderPresent(sdl_setupvar->renderer);
 
             chip8_instance->set_drawflag(false);
         }
 
-        usleep(refresh_rate);
+        usleep(refresh_time);
 
         if(chip8_instance->get_STP() == true) {
-            //implement something here 
+            std::string temp;
+            getline(std::cin, temp);
+            if (temp[0] == 27) //esc
+            {
+                //STATE = EMU_OFF
+            }
         }
     }
+
+    return 0;
 }
-int     close_window(struct STRUCT_SDL*);
+void close_window(struct STRUCT_SDL* sdl_setupvar) {
+    SDL_DestroyTexture(sdl_setupvar->texture);
+    SDL_DestroyRenderer(sdl_setupvar->renderer);
+    SDL_DestroyWindow(sdl_setupvar->window);
+
+    sdl_setupvar->texture = NULL;
+    sdl_setupvar->renderer = NULL;
+    sdl_setupvar->window = NULL;
+
+    SDL_Quit();
+    return;
+}
