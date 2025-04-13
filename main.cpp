@@ -1,9 +1,9 @@
 /*
 
+    Author: Rohan Shenoy
+
     The main driver program for the chip8 emulator
-
-    Takes "program.ch8" and runs it in the game loop
-
+    Manages the Display, and running the game loop.
 */
 
 #include <iostream>
@@ -24,7 +24,7 @@ using namespace std;
 #define REFRESH_TIME    1300          /* Refresh time in milliseconds                  */
 
 /* State of the machine, will be used for trace, and running. */
-enum MACHINESTATE {EMU_ON, EMU_READY, EMU_RUN, EMU_STOP, EMU_OFF, EMU_UNDEF};
+enum MACHINESTATE {EMU_ON, EMU_RUN, EMU_STOP, EMU_OFF, EMU_UNDEF};
 MACHINESTATE STATE = EMU_OFF; 
 
 /* SDL2 paramters, window width and height. */
@@ -104,6 +104,8 @@ void parse_commands(int argc, char* argv[], uint8_t *MODE){
         cout<<"\t-v : verbose mode, shows interal trace."<<endl;
         cout<<"\t-a : disables audio."<<endl;
         cout<<"\t-c : displays controls."<<endl;
+        cout<<"\t-s : single step mode."<<endl;
+        cout<<endl;
         exit(0);
     }
 
@@ -118,6 +120,7 @@ void parse_commands(int argc, char* argv[], uint8_t *MODE){
             cout<<"\t-v : verbose mode, shows interal trace."<<endl;
             cout<<"\t-a : disables audio."<<endl;
             cout<<"\t-c : displays controls."<<endl;
+            cout<<"\t-s : single step mode."<<endl;
             cout<<endl;
             option_correct = true;
         }
@@ -135,7 +138,24 @@ void parse_commands(int argc, char* argv[], uint8_t *MODE){
         }
     
         if(options.find("c") != string::npos) {
-            cout << "CONTROLS:";
+            cout << "CONTROLS:" << "\t ORIGINAL:" <<endl;
+            cout << "._______." << "\t ._______." << endl;
+            cout << "|1|2|3|4|" << "\t |1|2|3|D|" << endl;
+            cout << "|Q|W|E|R|" << "\t |4|5|6|E|" << endl;
+            cout << "|A|S|D|F|" << "\t |7|8|9|F|" << endl;
+            cout << "|Z|X|C|V|" << "\t |A|0|B|C|" << endl;
+            cout << "+-------+" << "\t +-------+" << endl;
+
+            cout << "KEY MACROS:" << endl;
+            cout << "\tESC   : Turn OFF Instance"<< endl;
+            cout << "\tP     : TOGGLE PAUSE"<< endl;
+            cout << "\tENTER : SINGLE STEP Forward (STEP mode)"<< endl;
+            option_correct = true;
+        }
+
+        if(options.find("s") != string::npos) {
+            cout<<"STEP MODE is ON. Press ENTER to SINGLE STEP forward, and 'q' to QUIT."<<endl;
+            *MODE |= MODE_STP;
             option_correct = true;
         }
 
@@ -200,12 +220,21 @@ int setup_window(struct STRUCT_SDL* sdl_setupvar) {
 }
 
 int run_gameloop(CHIP8 *chip8_instance, struct STRUCT_SDL* sdl_setupvar, int refresh_time) {
-    while(STATE == EMU_ON){
-        if(chip8_instance->cycle() == -1) {
-            cerr << "Error in CHIP8 cycle.";
-            return -1;
-        }
+    if(STATE == EMU_ON) {
+        STATE = EMU_RUN;
+    }
 
+    while(STATE == EMU_RUN || STATE == EMU_STOP){
+
+        if(STATE == EMU_RUN) {
+            if(chip8_instance->cycle() == -1) {
+                cerr << "Error in CHIP8 cycle.";
+                return -1;
+            }
+        } else if(STATE == EMU_STOP) {
+            //do nothing
+        }
+        
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if(event.type == SDL_QUIT){
@@ -214,6 +243,19 @@ int run_gameloop(CHIP8 *chip8_instance, struct STRUCT_SDL* sdl_setupvar, int ref
             }
 
             if(event.type == SDL_KEYDOWN) {
+
+                if (event.key.keysym.sym == SDLK_p) {
+                    if(STATE == EMU_RUN) {
+                        cout << "Instance stopped. Press 'P' to CONTINUE." << endl;;
+                        STATE = EMU_STOP;
+                    } else if (STATE == EMU_STOP) {
+                       
+                        cout << "Instance running." << endl;
+                        STATE = EMU_RUN;
+                       
+                    }
+                }
+
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
                     STATE = EMU_OFF;
                     return 0;
@@ -264,9 +306,9 @@ int run_gameloop(CHIP8 *chip8_instance, struct STRUCT_SDL* sdl_setupvar, int ref
         if(chip8_instance->get_STP() == true) {
             std::string temp;
             getline(std::cin, temp);
-            if (temp[0] == 27) //esc
+            if (temp[0] == 'q'||temp[0] == 'Q'||temp[0] == 27) //esc
             {
-                //STATE = EMU_OFF
+                STATE = EMU_OFF;
             }
         }
     }
