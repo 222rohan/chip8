@@ -1,8 +1,6 @@
 /*
 
-    TODO: FIX PROGRAM COUNTER INCREMENT
-
-    CHIP8 function definitions.
+    The CHIP8 function definitions.
 
     References: 1. https://github.com/sarbajitsaha/Chip-8-Emulator
                 2. https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
@@ -726,7 +724,8 @@ int CHIP8::instr_exec(uint16_t instruction) {
             std::cout<<"\tV["<<std::hex<<i<<"] = 0x"<<std::hex<<V[i]<<std::endl;
         }
         std::cout<<"\t[I]  = 0x" <<std::hex<<I<<std::endl;
-        std::cout<<"\t[SP] = 0x" <<std::hex<<SP<<std::endl;
+        if(SP >= 0)
+            std::cout<<"\t[SP] = 0x" <<std::hex<<STACK[SP]<<std::endl;
     }
     return 0;
 }

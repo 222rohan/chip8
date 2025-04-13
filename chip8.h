@@ -76,7 +76,7 @@ class CHIP8 {
         */
         uint8_t     MEM[MAX_MEMSIZE];       /* 4KB RAM                                  */
         uint16_t    STACK[MAX_STACKSIZE];   /* 16 x 16-bit addresses for function trace */
-        uint8_t     SP;                     /* 8-bit stack pointer                      */
+        int8_t      SP;                     /* 8-bit stack pointer                      */
 
         /*
         
